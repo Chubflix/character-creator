@@ -49,9 +49,22 @@ export default function CreatePage() {
 
     try {
       setIsLoading(true);
+
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        alert('Please sign in again');
+        return;
+      }
+
       const response = await fetch('/api/characters', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           userId: user.id,
           name: characterName,
@@ -98,9 +111,22 @@ export default function CreatePage() {
     setIsLoading(true);
 
     try {
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        alert('Please sign in again');
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           sessionId,
           characterId: character.id,
@@ -131,8 +157,22 @@ export default function CreatePage() {
     if (!user || !character) return;
 
     try {
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        alert('Please sign in again');
+        return;
+      }
+
       const response = await fetch(
-        `/api/characters/${character.id}/export?userId=${user.id}`
+        `/api/characters/${character.id}/export?userId=${user.id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
       );
       const data = await response.json();
 

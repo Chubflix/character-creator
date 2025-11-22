@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/services/supabase';
+import { requireAuth, verifyUserAccess, handleAuthError, getServiceSupabase } from '@/lib/auth/middleware';
+
+const supabase = getServiceSupabase();
 
 // GET all characters for a user
 export async function GET(request: NextRequest) {
   try {
+    const user = await requireAuth(request);
+
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');
 
@@ -13,6 +17,8 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    verifyUserAccess(user.id, userId);
 
     const { data: characters, error } = await supabase
       .from('characters')
@@ -26,17 +32,15 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ characters });
   } catch (error) {
-    console.error('Error fetching characters:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch characters' },
-      { status: 500 }
-    );
+    return handleAuthError(error);
   }
 }
 
 // POST create a new character
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireAuth(request);
+
     const body = await request.json();
     const { userId, name, description, personality, background, traits } = body;
 
@@ -46,6 +50,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    verifyUserAccess(user.id, userId);
 
     const { data: character, error } = await supabase
       .from('characters')
@@ -83,10 +89,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ character, session });
   } catch (error) {
-    console.error('Error creating character:', error);
-    return NextResponse.json(
-      { error: 'Failed to create character' },
-      { status: 500 }
-    );
+    return handleAuthError(error);
   }
 }

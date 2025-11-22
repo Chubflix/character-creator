@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/services/supabase';
+import { requireAuth, verifyUserAccess, handleAuthError, getServiceSupabase } from '@/lib/auth/middleware';
 import type { CharacterExport } from '@/lib/types/character';
+
+const supabase = getServiceSupabase();
 
 // GET export character as JSON
 export async function GET(
@@ -8,6 +10,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireAuth(request);
+
     const { id } = await params;
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');
@@ -18,6 +22,8 @@ export async function GET(
         { status: 400 }
       );
     }
+
+    verifyUserAccess(user.id, userId);
 
     const { data: character, error } = await supabase
       .from('characters')
@@ -56,10 +62,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error exporting character:', error);
-    return NextResponse.json(
-      { error: 'Failed to export character' },
-      { status: 500 }
-    );
+    return handleAuthError(error);
   }
 }

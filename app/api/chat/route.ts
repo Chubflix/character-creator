@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAIService } from '@/lib/services/ai-service';
-import { supabase } from '@/lib/services/supabase';
-import type { AIMessage } from '@/lib/types/ai';
+import { requireAuth, verifyUserAccess, handleAuthError, getServiceSupabase } from '@/lib/auth/middleware';
+import OpenAI from 'openai';
+import {getAIService} from "@/lib/services/ai-service";
+import {AIMessage} from "@/lib/types/ai";
+
+const supabase = getServiceSupabase();
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireAuth(request);
+
     const { sessionId, characterId, message, userId } = await request.json();
 
     if (!sessionId || !characterId || !message || !userId) {
@@ -13,6 +22,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    verifyUserAccess(user.id, userId);
 
     // Get character details
     const { data: character, error: characterError } = await supabase
@@ -103,10 +114,6 @@ Focus on building a rich, consistent character suitable for TavernAI and ChubAI.
 
     return NextResponse.json({ response });
   } catch (error) {
-    console.error('Chat API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process chat message' },
-      { status: 500 }
-    );
+    return handleAuthError(error);
   }
 }
